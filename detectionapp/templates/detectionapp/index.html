@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PersonaScan: Emotional & Gender Mapping</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 30px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        #container {
+            position: relative;
+            width: 680px;
+            height: 480px;
+            margin-bottom: 10px;
+            border: 3px solid #b3b3b3;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        #webcam,
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .face-icon {
+            font-size: 40px;
+            color: grey;
+            vertical-align: middle;
+            margin-top: 20px;
+            /* Added space on top of the icon */
+        }
+
+        #faceCount {
+            font-size: 24px;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        .button-container {
+            display: flex;
+            align-items: center;
+            /* Vertically aligns the items in the center */
+            justify-content: center;
+            /* Horizontally aligns the items in the center */
+            gap: 15px;
+            /* Spacing between the items */
+        }
+
+        .btn {
+            height: 50px;
+            /* or any height you prefer */
+        }
+
+        #detectButton,
+        #resetButton {
+            display: inline-block;
+            margin-top: 20px;
+            height: 48px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            outline: none;
+            border-radius: 5px;
+            vertical-align: middle;
+            line-height: 30px;
+
+            /* added this line */
+        }
+
+        #resetButton {
+            background-color: red;
+            color: white;
+            margin-left: 20px;
+        }
+
+        .male-icon,
+        .female-icon {
+            font-size: 50px;
+            color: grey;
+            vertical-align: middle;
+            margin-top: 20px;
+            margin-right: 10px;
+            /* Space between the icon and the count */
+        }
+
+        #maleCount,
+        #femaleCount {
+            font-size: 24px;
+            vertical-align: middle;
+            margin-right: 10px;
+            /* Space between count and the next icon */
+        }
+
+        /* Styling for the gender icons container */
+        .gender-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* This will center the icons and their counts horizontally */
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .gender-icon {
+            font-size: 40px;
+            color: grey;
+            vertical-align: middle;
+        }
+
+        /* Styling for the emotion icons container */
+        .emotion-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .emotion-icon {
+            font-size: 30px;
+            color: grey;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>PersonaScan: Emotional & Gender Mapping</h1>
+    <div id="container">
+        <video id="webcam" width="680" height="480" autoplay playsinline></video>
+        <canvas id="overlay" width="680" height="480"></canvas>
+    </div>
+    <div class="button-container">
+        <button id="detectButton" class="btn btn-primary">Start Detection</button>
+        <button id="resetButton" class="btn btn-danger">Reset</button>
+    </div>
+    <!-- Font Awesome Icon -->
+    <i class="fas fa-user face-icon" id="faceIcon"></i>
+    <span id="faceCount">0</span>
+
+    <div class="gender-container">
+        <i class="fas fa-male gender-icon" id="maleIcon"></i>
+        <span id="maleCount">0</span>
+
+        <i class="fas fa-female gender-icon" id="femaleIcon"></i>
+        <span id="femaleCount">0</span>
+    </div>
+
+    <div class="emotion-container">
+        <i class="fas fa-angry emotion-icon" id="angryIcon"></i>
+        <span id="angryCount">0</span>
+
+        <i class="fas fa-tired emotion-icon" id="disgustIcon"></i>
+        <span id="disgustCount">0</span>
+
+        <i class="fas fa-flushed emotion-icon" id="fearIcon"></i>
+        <span id="fearCount">0</span>
+
+        <i class="fas fa-smile emotion-icon" id="happyIcon"></i>
+        <span id="happyCount">0</span>
+
+        <i class="fas fa-frown emotion-icon" id="sadIcon"></i>
+        <span id="sadCount">0</span>
+
+        <i class="fas fa-surprise emotion-icon" id="surpriseIcon"></i>
+        <span id="surpriseCount">0</span>
+
+        <i class="fas fa-meh emotion-icon" id="neutralIcon"></i>
+        <span id="neutralCount">0</span>
+    </div>
+
+
+    <script>
+
+        function getCookie(name) {
+            let value = "; " + document.cookie;
+            let parts = value.split("; " + name + "=");
+            if (parts.length === 2) return parts.pop().split(";").shift();
+        }
+
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('overlay');
+        const context = canvas.getContext('2d');
+        let csrfToken = getCookie('csrftoken');
+        video.addEventListener('error', (event) => {
+            console.error("Video error:", event);
+        });
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(err => {
+                console.error("Error accessing the webcam:", err);
+            });
+
+        let detecting = false;
+        const faceIcon = document.getElementById('faceIcon');
+
+
+        function setEmotionCountsAndIcons(data) {
+
+            // Create an object to store emotion counts
+            const emotionCounts = {
+                Angry: 0,
+                Disgust: 0,
+                Fear: 0,
+                Happy: 0,
+                Sad: 0,
+                Surprise: 0,
+                Neutral: 0,
+            };
+
+            // Update the counts based on the data
+            if (data.gender_predictions) {
+                data.gender_predictions.forEach((prediction) => {
+                    const emotion = prediction.emotion;
+                    emotionCounts[emotion]++; // Increment the count for the emotion
+                });
+            }
+
+            // Update counts on the page for each emotion
+            for (const emotion in emotionCounts) {
+                const countElement = document.getElementById(`${emotion.toLowerCase()}Count`);
+                countElement.textContent = emotionCounts[emotion];
+            }
+
+            // Update icon colors based on the counts
+            for (const emotion in emotionCounts) {
+                const iconId = `${emotion.toLowerCase()}Icon`;
+                const count = emotionCounts[emotion];
+                const iconColor = count > 0 ? 'green' : 'grey';
+                document.getElementById(iconId).style.color = iconColor;
+            }
+        }
+
+        async function processDetection() {
+            if (!detecting) return;
+
+            const canvasTemp = document.createElement('canvas');
+            canvasTemp.width = video.videoWidth;
+            canvasTemp.height = video.videoHeight;
+            const ctxTemp = canvasTemp.getContext('2d');
+            ctxTemp.drawImage(video, 0, 0, canvasTemp.width, canvasTemp.height);
+            const dataURL = canvasTemp.toDataURL('image/jpeg');
+
+            try {
+                const response = await fetch('/detect/', {
+                    method: 'POST',
+                    body: JSON.stringify({ image: dataURL }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                });
+
+                const data = await response.json(); // Parse the response JSON
+
+                if (data && data.image) {
+
+                    const numberOfFaces = data.gender_predictions ? data.gender_predictions.length : 0;
+                    document.getElementById('faceCount').textContent = numberOfFaces;
+
+                    if (numberOfFaces > 0) {
+                        document.getElementById('faceIcon').style.color = 'green';
+                    } else {
+                        document.getElementById('faceIcon').style.color = 'grey';
+                    } // To make it green
+
+                    // Male user count
+                    const numberOfMales = data.gender_predictions ? data.gender_predictions.filter(prediction => prediction.gender === "Male").length : 0;
+                    document.getElementById('maleCount').textContent = numberOfMales;
+
+                    if (numberOfMales > 0) {
+                        document.getElementById('maleIcon').style.color = 'blue'; // Male icon color
+                    } else {
+                        document.getElementById('maleIcon').style.color = 'grey'; // Reset to grey
+                    }
+
+                    // Female user count
+                    const numberOfFemales = data.gender_predictions ? data.gender_predictions.filter(prediction => prediction.gender === "Female").length : 0;
+                    document.getElementById('femaleCount').textContent = numberOfFemales;
+
+                    if (numberOfFemales > 0) {
+                        document.getElementById('femaleIcon').style.color = 'pink'; // Female icon color
+                    } else {
+                        document.getElementById('femaleIcon').style.color = 'grey'; // Reset to grey
+                    }
+
+                    setEmotionCountsAndIcons(data); // Set Emotion icon and its count 
+
+                    const resultImage = new Image();
+                    resultImage.src = 'data:image/jpeg;base64,' + data.image;
+                    resultImage.onload = function () {
+                        context.clearRect(0, 0, canvas.width, canvas.height);  // Clear the canvas
+                        context.drawImage(resultImage, 0, 0, canvas.width, canvas.height);
+
+                        // Render gender on the canvas
+                        if (data.gender_predictions) {
+                            console.log("🚀 ~ file: index.html:324 ~ processDetection ~ data:", data)
+                            // Render gender on the canvas
+                            // data.gender_predictions.forEach((prediction, index) => {
+                                // context.font = "20px Arial";
+                                // context.fillStyle = "white";
+
+                                // // Fixed y-coordinate for testing purposes
+                                // const yPos = 30 + index * 30;  // Adjusts position for each label
+
+                                // // Get the width of the text to adjust the rectangle width dynamically
+                                // const textWidth = context.measureText(prediction.gender).width;
+                                // const padding = 5; // padding around the text
+
+                                // // Draw white rectangle behind the text
+                                // context.fillRect(10 - padding, yPos - 20, textWidth + (2 * padding), 24);
+
+                                // // Draw the text on top of the rectangle
+                                // context.fillStyle = "red";
+                                // context.fillText(prediction.gender, 10, yPos);
+                                // context.font = "24px Arial";
+                                // context.fillStyle = "white";
+
+                                // Adjusts position for each label based on face position
+                                // const xPos = prediction.x + 20; // Adjust the X position
+                                // const yPos = prediction.y - 10; // Adjust the Y position
+
+                                // Draw white rectangle behind the text
+                                // const textWidth = context.measureText(prediction.gender).width;
+                                // const padding = 5;
+                                // context.fillRect(xPos - padding, yPos - 20, textWidth + (2 * padding), 24);
+
+                                // Draw the gender text on top of the rectangle
+                                // context.fillStyle = "blue";
+                                // context.fillText(prediction.gender, xPos, yPos);
+
+                                // Adjust position for the emotion label (below gender)
+                                // const emotionXPos = prediction.x + 10; // Adjust the X position
+                                // const emotionYPos = prediction.y + 25; // Adjust the Y position
+
+                                // Draw white rectangle behind the emotion text
+                                // const emotionTextWidth = context.measureText(prediction.emotion).width;
+                                // context.fillRect(emotionXPos - padding, emotionYPos - 20, emotionTextWidth + (2 * padding), 24);
+
+                                
+                            // });
+
+                        }
+                    };
+                } else {
+                    console.error("Server returned status code:", response.status);
+                }
+            } catch (error) {
+                console.error("Error processing server response:", error);
+            }
+
+            requestAnimationFrame(processDetection);
+        }
+
+        document.getElementById("detectButton").addEventListener("click", function (event) {
+            event.preventDefault();
+            detecting = !detecting;
+            if (detecting) {
+                this.textContent = "Stop Detection";
+                processDetection();
+            } else {
+                this.textContent = "Start Detection";
+                context.clearRect(0, 0, canvas.width, canvas.height);  // Clear the canvas
+                document.getElementById('faceIcon').style.color = 'grey'; // To reset it to grey
+
+            }
+        });
+        function resetEmotionCountsAndIcons() {
+            // Reset the emotion counts
+            document.getElementById('angryCount').textContent = '0';
+            document.getElementById('disgustCount').textContent = '0';
+            document.getElementById('fearCount').textContent = '0';
+            document.getElementById('happyCount').textContent = '0';
+            document.getElementById('sadCount').textContent = '0';
+            document.getElementById('surpriseCount').textContent = '0';
+            document.getElementById('neutralCount').textContent = '0';
+
+            // Reset the emotion icons to grey
+            document.getElementById('angryIcon').style.color = 'grey';
+            document.getElementById('disgustIcon').style.color = 'grey';
+            document.getElementById('fearIcon').style.color = 'grey';
+            document.getElementById('happyIcon').style.color = 'grey';
+            document.getElementById('sadIcon').style.color = 'grey';
+            document.getElementById('surpriseIcon').style.color = 'grey';
+            document.getElementById('neutralIcon').style.color = 'grey';
+        }
+        document.getElementById("resetButton").addEventListener("click", function (event) {
+            event.preventDefault();
+
+            // Stop the detection if it's running
+            detecting = false;
+            document.getElementById("detectButton").textContent = "Start Detection";
+            context.clearRect(0, 0, canvas.width, canvas.height);  // Clear the canvas
+
+            // Reset the icon color and face count
+            document.getElementById('faceIcon').style.color = 'grey';
+            document.getElementById('faceCount').textContent = '0';
+
+            // Reset the male and female icon colors and counts
+            document.getElementById('maleIcon').style.color = 'grey';
+            document.getElementById('maleCount').textContent = '0';
+            document.getElementById('femaleIcon').style.color = 'grey';
+            document.getElementById('femaleCount').textContent = '0';
+            resetEmotionCountsAndIcons(); // reset emoticons and counts
+        });
+    </script>
+</body>
+
+</html>
