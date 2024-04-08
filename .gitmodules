@@ -1,3 +1,3 @@
 [submodule "yolov5"]
-    path = Sentimask/yolov5
-    url = https://github.com/ultralytics/yolov5.git
+	path = myproject/myproject/Sentimask/yolov5
+	url = https://github.com/ultralytics/yolov5.git
