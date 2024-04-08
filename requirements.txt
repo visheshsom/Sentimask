@@ -1,0 +1,8 @@
+Django>=4.2.4
+djangorestframework
+Pillow
+torch>=1.7.1
+torchvision>=0.8.2
+numpy
+opencv-python-headless>=4.5.1.48
+tensorflow>=2.4.0  
