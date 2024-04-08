@@ -74,10 +74,10 @@ To use the Sentimask application, follow these steps:
 
 For example, as seen in the attached screenshot, the application has detected one face with a high confidence level. It has identified the gender as Male and the emotion as Fear. The corresponding icons in the control panel reflect this detection. You can interact with the application in real-time, and it will update the detection as the subject's facial expressions change or as new faces come into view.
 
-![PersonaScan Screenshot](Sentimask_App.png)
+![Sentimask Screenshot](Sentimask_App.png)
 
 
-Remember to ensure good lighting and clear visibility of the face for optimal detection performance. Enjoy exploring the different features and capabilities of the PersonaScan application!
+Remember to ensure good lighting and clear visibility of the face for optimal detection performance. Enjoy exploring the different features and capabilities of the Sentimask application!
 
 
 ## Contributing
